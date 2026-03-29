@@ -1,0 +1,352 @@
+'use client'
+
+import { useState } from 'react'
+import {
+  ASSETS,
+  RISK_PROFILES,
+  VOLATILITY_BADGE,
+  normaliseAllocations,
+  type AssetKey,
+  type PortfolioAllocation,
+  type RiskLevel,
+} from '@/lib/investment-logic'
+
+// ─── SVG Donut Chart ──────────────────────────────────────────────────────────
+
+const CX = 100
+const CY = 100
+const OUTER_R = 80
+const INNER_R = 52
+
+function polarToXY(angleDeg: number, radius: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return {
+    x: CX + radius * Math.cos(rad),
+    y: CY + radius * Math.sin(rad),
+  }
+}
+
+function donutArcPath(startDeg: number, endDeg: number): string {
+  // Avoid SVG degenerate path when a single segment fills 100%
+  if (endDeg - startDeg >= 359.999) endDeg = startDeg + 359.999
+
+  const o1 = polarToXY(startDeg, OUTER_R)
+  const o2 = polarToXY(endDeg, OUTER_R)
+  const i1 = polarToXY(endDeg, INNER_R)
+  const i2 = polarToXY(startDeg, INNER_R)
+  const large = endDeg - startDeg > 180 ? 1 : 0
+
+  return [
+    `M ${o1.x.toFixed(3)} ${o1.y.toFixed(3)}`,
+    `A ${OUTER_R} ${OUTER_R} 0 ${large} 1 ${o2.x.toFixed(3)} ${o2.y.toFixed(3)}`,
+    `L ${i1.x.toFixed(3)} ${i1.y.toFixed(3)}`,
+    `A ${INNER_R} ${INNER_R} 0 ${large} 0 ${i2.x.toFixed(3)} ${i2.y.toFixed(3)}`,
+    'Z',
+  ].join(' ')
+}
+
+interface DonutChartProps {
+  allocations: PortfolioAllocation[]
+  profileLabel: string
+}
+
+function DonutChart({ allocations, profileLabel }: DonutChartProps) {
+  const [hovered, setHovered] = useState<AssetKey | null>(null)
+
+  let cumAngle = 0
+  const segments = allocations.map((a) => {
+    const startDeg = cumAngle
+    const endDeg = cumAngle + (a.weight / 100) * 360
+    cumAngle = endDeg
+    return { ...a, startDeg, endDeg }
+  })
+
+  const hoveredAlloc = hovered ? allocations.find((a) => a.assetKey === hovered) : null
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <svg
+        viewBox="0 0 200 200"
+        className="w-full max-w-[220px] drop-shadow-sm"
+        aria-label={`Donut chart of ${profileLabel} portfolio allocation`}
+        role="img"
+      >
+        {/* Background ring */}
+        <circle
+          cx={CX}
+          cy={CY}
+          r={(OUTER_R + INNER_R) / 2}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={OUTER_R - INNER_R}
+          className="text-slate-100 dark:text-slate-700"
+          opacity={0.5}
+        />
+
+        {segments.map((seg) => (
+          <path
+            key={seg.assetKey}
+            d={donutArcPath(seg.startDeg, seg.endDeg)}
+            fill={seg.asset.hex}
+            opacity={hovered && hovered !== seg.assetKey ? 0.3 : 1}
+            className="cursor-pointer transition-opacity duration-200"
+            onMouseEnter={() => setHovered(seg.assetKey)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setHovered(seg.assetKey)}
+            onBlur={() => setHovered(null)}
+            tabIndex={0}
+            role="img"
+            aria-label={`${seg.asset.label}: ${seg.weight}%`}
+          >
+            <title>{`${seg.asset.label}: ${seg.weight}%`}</title>
+          </path>
+        ))}
+
+        {/* Centre label */}
+        {hoveredAlloc ? (
+          <>
+            <text
+              x={CX}
+              y={CY - 8}
+              textAnchor="middle"
+              fontSize="22"
+              fontWeight="700"
+              fill={hoveredAlloc.asset.hex}
+            >
+              {hoveredAlloc.weight}%
+            </text>
+            <text
+              x={CX}
+              y={CY + 10}
+              textAnchor="middle"
+              fontSize="9"
+              className="fill-slate-500 dark:fill-slate-300"
+              fill="currentColor"
+            >
+              {hoveredAlloc.asset.label}
+            </text>
+          </>
+        ) : (
+          <>
+            <text
+              x={CX}
+              y={CY - 6}
+              textAnchor="middle"
+              fontSize="11"
+              fontWeight="600"
+              className="fill-slate-700 dark:fill-slate-200"
+              fill="currentColor"
+            >
+              {profileLabel}
+            </text>
+            <text
+              x={CX}
+              y={CY + 10}
+              textAnchor="middle"
+              fontSize="9"
+              className="fill-slate-400 dark:fill-slate-500"
+              fill="currentColor"
+            >
+              Hover to inspect
+            </text>
+          </>
+        )}
+      </svg>
+    </div>
+  )
+}
+
+// ─── Allocation Rows ──────────────────────────────────────────────────────────
+
+function AllocationRow({ alloc }: { alloc: PortfolioAllocation }) {
+  const { asset, weight } = alloc
+  return (
+    <div className="group">
+      <div className="mb-1 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-sm"
+            style={{ backgroundColor: asset.hex }}
+          />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {asset.label}
+          </span>
+          {asset.isHighRisk && (
+            <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+              High Risk
+            </span>
+          )}
+        </div>
+        <span
+          className="text-sm font-bold"
+          style={{ color: asset.hex }}
+        >
+          {weight}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${weight}%`, backgroundColor: asset.hex }}
+        />
+      </div>
+
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+        {asset.description}
+      </p>
+    </div>
+  )
+}
+
+// ─── Asset Toggle Checkboxes ──────────────────────────────────────────────────
+
+interface AssetToggleProps {
+  available: AssetKey[]
+  selected: AssetKey[]
+  onChange: (keys: AssetKey[]) => void
+}
+
+function AssetToggles({ available, selected, onChange }: AssetToggleProps) {
+  function toggle(key: AssetKey) {
+    onChange(
+      selected.includes(key)
+        ? selected.filter((k) => k !== key)
+        : [...selected, key],
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {available.map((key) => {
+        const asset = ASSETS[key]
+        const checked = selected.includes(key)
+        return (
+          <button
+            key={key}
+            onClick={() => toggle(key)}
+            className={`
+              flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold
+              transition-all duration-150
+              ${
+                checked
+                  ? 'border-transparent text-white shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400'
+              }
+            `}
+            style={checked ? { backgroundColor: asset.hex } : {}}
+            aria-pressed={checked}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${checked ? 'bg-white/60' : ''}`}
+              style={!checked ? { backgroundColor: asset.hex } : {}}
+            />
+            {asset.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── InvestmentDashboard ──────────────────────────────────────────────────────
+
+interface Props {
+  profileId: RiskLevel
+}
+
+export default function InvestmentDashboard({ profileId }: Props) {
+  const profile = RISK_PROFILES[profileId]
+  const [selectedAssets, setSelectedAssets] = useState<AssetKey[]>(
+    profile.availableAssets,
+  )
+
+  // Re-seed when profile changes externally
+  // (parent will remount this component by keying on profileId)
+  const allocations = normaliseAllocations(profile, selectedAssets)
+
+  return (
+    <div className="flex flex-col gap-8">
+      {/* Profile header */}
+      <div
+        className={`
+          flex flex-wrap items-center justify-between gap-4 rounded-2xl
+          bg-gradient-to-r ${profile.theme.gradient} p-5 text-white shadow
+        `}
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
+            Active Profile
+          </p>
+          <h3 className="text-2xl font-bold">{profile.label}</h3>
+          <p className="text-sm text-white/80">{profile.tagline}</p>
+        </div>
+        <div className="flex flex-wrap gap-4 text-right">
+          <div>
+            <p className="text-xs text-white/60">Expected Return</p>
+            <p className="font-semibold">{profile.expectedReturn}</p>
+          </div>
+          <div>
+            <p className="text-xs text-white/60">Time Horizon</p>
+            <p className="font-semibold">{profile.timeHorizon}</p>
+          </div>
+          <div>
+            <p className="text-xs text-white/60">Volatility</p>
+            <span
+              className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${VOLATILITY_BADGE[profile.volatility]}`}
+            >
+              {profile.volatility}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Asset filter toggles */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          Customise — toggle asset classes
+        </p>
+        <AssetToggles
+          available={profile.availableAssets}
+          selected={selectedAssets}
+          onChange={setSelectedAssets}
+        />
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          High-risk assets (Stocks, Crypto) are only available for Aggressive profiles.
+          Weights auto-normalise to 100% when you deselect an asset.
+        </p>
+      </div>
+
+      {allocations.length === 0 ? (
+        <div className="flex flex-col items-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 py-12 text-center dark:border-slate-700 dark:bg-slate-800/50">
+          <span className="mb-2 text-4xl">📊</span>
+          <p className="font-semibold text-slate-500 dark:text-slate-400">
+            Select at least one asset class above
+          </p>
+        </div>
+      ) : (
+        /* Two-column layout: chart + breakdown */
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[auto_1fr]">
+          {/* Donut chart */}
+          <div className="flex justify-center md:justify-start">
+            <DonutChart
+              allocations={allocations}
+              profileLabel={profile.label}
+            />
+          </div>
+
+          {/* Allocation breakdown rows */}
+          <div className="flex flex-col justify-center gap-5">
+            {allocations
+              .slice()
+              .sort((a, b) => b.weight - a.weight)
+              .map((alloc) => (
+                <AllocationRow key={alloc.assetKey} alloc={alloc} />
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
