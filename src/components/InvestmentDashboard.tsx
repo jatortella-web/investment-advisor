@@ -330,6 +330,118 @@ function TopRecommendedAssets({ picks }: { picks: TopPick[] }) {
   )
 }
 
+// ─── Returns Calculator ───────────────────────────────────────────────────────
+
+/** Extracts the numeric midpoint from strings like "6–9% p.a." or "15–30%+ p.a." */
+function parseMidpointRate(expectedReturn: string): number {
+  const nums = (expectedReturn.match(/\d+(?:\.\d+)?/g) ?? []).map(Number)
+  if (nums.length === 0) return 0
+  return nums.reduce((a, b) => a + b, 0) / nums.length / 100
+}
+
+function compoundValue(principal: number, rate: number, years: number): number {
+  return principal * Math.pow(1 + rate, years)
+}
+
+function formatEUR(amount: number): string {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+const FORECAST_YEARS = [1, 5, 10] as const
+
+interface ReturnsCalculatorProps {
+  expectedReturn: string
+}
+
+function ReturnsCalculator({ expectedReturn }: ReturnsCalculatorProps) {
+  const [principal, setPrincipal] = useState('')
+
+  const rate = parseMidpointRate(expectedReturn)
+  const p = parseFloat(principal)
+  const hasValue = principal !== '' && !isNaN(p) && p > 0
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-2">
+        <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+          Returns Calculator
+        </h4>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+          {expectedReturn}
+        </span>
+      </div>
+
+      {/* Amount input */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="relative w-56">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-slate-400">
+            €
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            placeholder="10 000"
+            value={principal}
+            onChange={(e) => setPrincipal(e.target.value)}
+            className="
+              w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-4
+              text-sm font-semibold text-slate-800 shadow-sm
+              placeholder:text-slate-300
+              focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1
+              dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100
+              dark:placeholder:text-slate-600 dark:focus:ring-indigo-500
+            "
+          />
+        </div>
+        {hasValue && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            @ {(rate * 100).toFixed(1)}% midpoint annual rate
+          </p>
+        )}
+      </div>
+
+      {/* Forecast cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {FORECAST_YEARS.map((years) => {
+          const value = hasValue ? compoundValue(p, rate, years) : null
+          const gain = value !== null ? value - p : null
+          return (
+            <div
+              key={years}
+              className="flex flex-col gap-1.5 rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                {years} {years === 1 ? 'year' : 'years'}
+              </p>
+              {value !== null ? (
+                <>
+                  <p className="text-base font-bold text-slate-800 dark:text-slate-100">
+                    {formatEUR(value)}
+                  </p>
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    +{formatEUR(gain!)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-base font-bold text-slate-300 dark:text-slate-600">—</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+        A&nbsp;=&nbsp;P(1&nbsp;+&nbsp;r)ⁿ at the midpoint rate. Illustrative only — actual returns will vary.
+      </p>
+    </div>
+  )
+}
+
 // ─── InvestmentDashboard ──────────────────────────────────────────────────────
 
 interface Props {
@@ -427,6 +539,9 @@ export default function InvestmentDashboard({ profileId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Returns Calculator */}
+      <ReturnsCalculator expectedReturn={profile.expectedReturn} />
 
       {/* Divider */}
       <hr className="border-slate-100 dark:border-slate-700" />
