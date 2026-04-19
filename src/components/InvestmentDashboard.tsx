@@ -5,11 +5,14 @@ import {
   ASSETS,
   RISK_PROFILES,
   VOLATILITY_BADGE,
+  EDUCATIONAL_DISCLAIMER,
   normaliseAllocations,
   type AssetKey,
   type PortfolioAllocation,
   type RiskLevel,
+  type TopPick,
 } from '@/lib/investment-logic'
+import InfoTooltip from '@/components/InfoTooltip'
 
 // ─── SVG Donut Chart ──────────────────────────────────────────────────────────
 
@@ -196,6 +199,19 @@ function AllocationRow({ alloc }: { alloc: PortfolioAllocation }) {
       <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
         {asset.description}
       </p>
+
+      {alloc.examples.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {alloc.examples.map((ticker) => (
+            <span
+              key={ticker}
+              className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+            >
+              {ticker}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -246,6 +262,70 @@ function AssetToggles({ available, selected, onChange }: AssetToggleProps) {
           </button>
         )
       })}
+    </div>
+  )
+}
+
+// ─── Top Recommended Assets ───────────────────────────────────────────────────
+
+const ASSET_KEY_LABEL: Record<AssetKey, string> = {
+  indexFunds: 'Index Fund',
+  etfs: 'ETF',
+  stocks: 'Stock',
+  commodities: 'Commodity',
+  crypto: 'Crypto',
+}
+
+function TopPickCard({ pick }: { pick: TopPick }) {
+  const asset = ASSETS[pick.assetKey]
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+      {/* Ticker + type badge */}
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="rounded-md px-2.5 py-1 font-mono text-sm font-bold text-white"
+          style={{ backgroundColor: asset.hex }}
+        >
+          {pick.ticker}
+        </span>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+          style={{ color: asset.hex, backgroundColor: `${asset.hex}18` }}
+        >
+          {ASSET_KEY_LABEL[pick.assetKey]}
+        </span>
+      </div>
+
+      {/* Name */}
+      <p className="text-sm font-semibold leading-tight text-slate-800 dark:text-slate-100">
+        {pick.name}
+      </p>
+
+      {/* Rationale */}
+      <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+        {pick.note}
+      </p>
+    </div>
+  )
+}
+
+function TopRecommendedAssets({ picks }: { picks: TopPick[] }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+          Top Recommended Assets
+        </h4>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+          {picks.length} picks
+        </span>
+        <InfoTooltip note={EDUCATIONAL_DISCLAIMER} direction="bottom" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {picks.map((pick) => (
+          <TopPickCard key={pick.ticker} pick={pick} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -347,6 +427,12 @@ export default function InvestmentDashboard({ profileId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Divider */}
+      <hr className="border-slate-100 dark:border-slate-700" />
+
+      {/* Top Recommended Assets */}
+      <TopRecommendedAssets picks={profile.topPicks} />
     </div>
   )
 }

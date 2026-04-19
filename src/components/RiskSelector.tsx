@@ -4,9 +4,11 @@ import {
   RISK_PROFILES,
   RISK_LEVEL_ORDER,
   VOLATILITY_BADGE,
+  EDUCATIONAL_DISCLAIMER,
   type RiskLevel,
   type RiskProfile,
 } from '@/lib/investment-logic'
+import InfoTooltip from '@/components/InfoTooltip'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -52,18 +54,17 @@ function ProfileCard({ profile, isSelected, onSelect }: CardProps) {
   const { theme } = profile
 
   return (
-    <button
-      role="radio"
-      aria-checked={isSelected}
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect()}
       className={`
-        group relative flex flex-col overflow-hidden rounded-2xl border-2 text-left
+        group relative flex flex-col cursor-pointer overflow-hidden rounded-2xl border-2 text-left
         transition-all duration-200 focus:outline-none focus-visible:ring-2
-        focus-visible:ring-offset-2 ${theme.ring}
-        ${
-          isSelected
-            ? `${theme.border} ${theme.darkBorder} shadow-lg ring-2 ring-offset-2 ${theme.ring}`
-            : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600'
+        ${isSelected
+            ? `${theme.border} shadow-lg ring-2 ring-indigo-500`
+            : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800'
         }
       `}
     >
@@ -147,8 +148,29 @@ function ProfileCard({ profile, isSelected, onSelect }: CardProps) {
             </span>
           ))}
         </div>
+
+        {/* Top picks ticker strip */}
+        <div className="border-t border-slate-100 pt-3 dark:border-slate-700">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Top Picks
+            </span>
+            <InfoTooltip note={EDUCATIONAL_DISCLAIMER} direction="top" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {profile.topPicks.map((pick) => (
+              <span
+                key={pick.ticker}
+                title={pick.name}
+                className="rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] font-bold text-white dark:bg-slate-600"
+              >
+                {pick.ticker}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
-    </button>
+    </div>
   )
 }
 
