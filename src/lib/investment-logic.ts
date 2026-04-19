@@ -160,24 +160,25 @@ export const RISK_PROFILES: Record<RiskLevel, RiskProfile> = {
     label: 'Conservative',
     tagline: 'Capital preservation first',
     description:
-      'Prioritises protecting principal with stable, low-volatility instruments such as ' +
-      'VTSAX (Vanguard Total Stock Market), BND (Total Bond ETF), and GLD (SPDR Gold). ' +
-      'Suited for short time horizons or investors unwilling to absorb drawdowns.',
+      'Prioritises protecting principal through investment-grade bond index funds ' +
+      'such as VBIIX (Vanguard Intermediate-Term Bond Index) and the iShares Core ' +
+      'US Aggregate Bond ETF (AGG), with a small gold allocation via GLD for ' +
+      'inflation hedging. Suited for short time horizons or investors unwilling to absorb drawdowns.',
     riskScore: 1,
     expectedReturn: '3–5% p.a.',
     volatility: 'Very Low',
     timeHorizon: '1–3 years',
     allocations: [
-      { assetKey: 'indexFunds',  weight: 70, examples: ['VTSAX', 'VFIAX', 'FXAIX'] },
-      { assetKey: 'etfs',        weight: 20, examples: ['BND', 'AGG', 'SCHZ']       },
-      { assetKey: 'commodities', weight: 10, examples: ['GLD', 'IAU']               },
+      { assetKey: 'indexFunds',  weight: 70, examples: ['VBIIX', 'VBTLX', 'FBIDX']  },
+      { assetKey: 'etfs',        weight: 20, examples: ['AGG', 'BND', 'VCSH']        },
+      { assetKey: 'commodities', weight: 10, examples: ['GLD', 'IAU']                },
     ],
     availableAssets: ['indexFunds', 'etfs', 'commodities'],
     topPicks: [
-      { ticker: 'VTSAX', name: 'Vanguard Total Stock Market Index', assetKey: 'indexFunds', note: 'Broadest US equity coverage at 0.04% expense ratio' },
-      { ticker: 'BND',   name: 'Vanguard Total Bond Market ETF',   assetKey: 'etfs',        note: 'Stable fixed-income anchor across 10,000+ bonds' },
-      { ticker: 'FXAIX', name: 'Fidelity 500 Index Fund',          assetKey: 'indexFunds',  note: 'S&P 500 tracker with a 0% expense ratio' },
-      { ticker: 'GLD',   name: 'SPDR Gold Shares ETF',             assetKey: 'commodities', note: 'Physically-backed gold hedge against inflation' },
+      { ticker: 'VBIIX', name: 'Vanguard Intermediate-Term Bond Index', assetKey: 'indexFunds',  note: 'Investment-grade US bonds with ~6-year duration; historically ~3–4% annual return' },
+      { ticker: 'AGG',   name: 'iShares Core US Aggregate Bond ETF',    assetKey: 'etfs',        note: 'Benchmark US bond ETF covering 10,000+ investment-grade securities' },
+      { ticker: 'BND',   name: 'Vanguard Total Bond Market ETF',        assetKey: 'etfs',        note: 'Vanguard\'s low-cost (0.03% ER) fixed-income counterpart to VBIIX' },
+      { ticker: 'GLD',   name: 'SPDR Gold Shares ETF',                  assetKey: 'commodities', note: 'Physically-backed gold for inflation protection; low equity correlation' },
     ],
     theme: {
       gradient: 'from-blue-600 to-blue-500',
@@ -193,25 +194,26 @@ export const RISK_PROFILES: Record<RiskLevel, RiskProfile> = {
     label: 'Moderate',
     tagline: 'Balanced growth and stability',
     description:
-      'Blends growth and income assets for steady long-term returns without extreme swings. ' +
-      'Core holdings include VTSAX (index), SPY / VTI (ETFs), GLD (gold hedge), ' +
-      'and blue-chip stocks like AAPL and MSFT. Suitable for medium-term investors.',
+      'Blends broad equity index funds (VOO, VFIAX) with internationally diversified ' +
+      'ETFs like iShares MSCI EAFE (IEFA) and quality blue-chip stocks such as ' +
+      'Microsoft (MSFT) and Apple (AAPL). Gold via IAU provides a non-correlated ' +
+      'hedge. Suitable for medium-term investors comfortable with moderate drawdowns.',
     riskScore: 2,
     expectedReturn: '6–9% p.a.',
     volatility: 'Medium',
     timeHorizon: '3–7 years',
     allocations: [
-      { assetKey: 'indexFunds',  weight: 40, examples: ['VTSAX', 'FXAIX']       },
-      { assetKey: 'etfs',        weight: 30, examples: ['SPY', 'VTI', 'SCHB']   },
-      { assetKey: 'commodities', weight: 20, examples: ['GLD', 'SLV']           },
-      { assetKey: 'stocks',      weight: 10, examples: ['AAPL', 'MSFT', 'JNJ']  },
+      { assetKey: 'indexFunds',  weight: 40, examples: ['VFIAX', 'VOO', 'FXAIX']    },
+      { assetKey: 'etfs',        weight: 30, examples: ['VTI', 'IEFA', 'IXUS']      },
+      { assetKey: 'commodities', weight: 20, examples: ['IAU', 'GLD']               },
+      { assetKey: 'stocks',      weight: 10, examples: ['MSFT', 'AAPL', 'JNJ']      },
     ],
     availableAssets: ['indexFunds', 'etfs', 'commodities', 'stocks'],
     topPicks: [
-      { ticker: 'VTSAX', name: 'Vanguard Total Stock Market Index', assetKey: 'indexFunds',  note: 'Core equity position with maximum US market diversification' },
-      { ticker: 'SPY',   name: 'SPDR S&P 500 ETF Trust',           assetKey: 'etfs',         note: 'Most liquid ETF; tracks 500 large-cap US companies' },
-      { ticker: 'GLD',   name: 'SPDR Gold Shares ETF',             assetKey: 'commodities',  note: 'Balances equity risk with a non-correlated hard asset' },
-      { ticker: 'AAPL',  name: 'Apple Inc.',                       assetKey: 'stocks',       note: 'Mega-cap quality anchor with strong cash flows and buybacks' },
+      { ticker: 'VOO',  name: 'Vanguard S&P 500 ETF',           assetKey: 'indexFunds',  note: 'Vanguard\'s flagship S&P 500 fund; 0.03% ER with ~10% historical annual return' },
+      { ticker: 'VTI',  name: 'Vanguard Total Stock Market ETF', assetKey: 'etfs',        note: 'Total US market in one ETF — over 3,700 stocks including small-caps' },
+      { ticker: 'IEFA', name: 'iShares Core MSCI EAFE ETF',      assetKey: 'etfs',        note: 'Broad international developed-market exposure across Europe, Asia, and Australia' },
+      { ticker: 'MSFT', name: 'Microsoft Corporation',           assetKey: 'stocks',      note: 'Durable cash-flow compounder with leading positions in cloud (Azure) and AI' },
     ],
     theme: {
       gradient: 'from-indigo-600 to-indigo-500',
@@ -227,26 +229,27 @@ export const RISK_PROFILES: Record<RiskLevel, RiskProfile> = {
     label: 'Aggressive',
     tagline: 'Growth over stability',
     description:
-      'Concentrates on high-growth equities (NVDA, GOOGL, AMZN) and tech ETFs (QQQ, VGT) ' +
-      'with a small Bitcoin/Ethereum allocation for asymmetric upside. ' +
+      'Concentrates on high-growth equities — Apple (AAPL), Microsoft (MSFT), Nvidia (NVDA) — ' +
+      'alongside tech-focused ETFs such as QQQ (Invesco Nasdaq-100) and the iShares ' +
+      'Russell 1000 Growth ETF (IWF). A 5% Bitcoin allocation adds asymmetric upside. ' +
       'Requires tolerance for significant short-term volatility.',
     riskScore: 3,
     expectedReturn: '10–15% p.a.',
     volatility: 'High',
     timeHorizon: '7–15 years',
     allocations: [
-      { assetKey: 'stocks',      weight: 45, examples: ['NVDA', 'GOOGL', 'AMZN', 'AAPL']  },
-      { assetKey: 'etfs',        weight: 25, examples: ['QQQ', 'VGT', 'SOXX']             },
-      { assetKey: 'indexFunds',  weight: 15, examples: ['VTSAX']                          },
+      { assetKey: 'stocks',      weight: 45, examples: ['AAPL', 'MSFT', 'NVDA', 'GOOGL']  },
+      { assetKey: 'etfs',        weight: 25, examples: ['QQQ', 'IWF', 'VGT']              },
+      { assetKey: 'indexFunds',  weight: 15, examples: ['VOO', 'VIGAX']                   },
       { assetKey: 'commodities', weight: 10, examples: ['GLD', 'PDBC']                    },
       { assetKey: 'crypto',      weight: 5,  examples: ['BTC', 'ETH']                     },
     ],
     availableAssets: ['indexFunds', 'etfs', 'stocks', 'commodities', 'crypto'],
     topPicks: [
-      { ticker: 'QQQ',   name: 'Invesco Nasdaq-100 ETF',  assetKey: 'etfs',    note: 'Top 100 non-financial Nasdaq stocks; tech and AI-heavy' },
-      { ticker: 'NVDA',  name: 'Nvidia Corporation',      assetKey: 'stocks',  note: 'Dominant AI infrastructure play with GPU market leadership' },
-      { ticker: 'GOOGL', name: 'Alphabet Inc.',           assetKey: 'stocks',  note: 'Diversified tech platform: search, cloud (GCP), and AI' },
-      { ticker: 'BTC',   name: 'Bitcoin',                 assetKey: 'crypto',  note: 'Small satellite crypto allocation for asymmetric upside' },
+      { ticker: 'QQQ',  name: 'Invesco Nasdaq-100 ETF',      assetKey: 'etfs',    note: 'Top 100 non-financial Nasdaq companies; historically ~17% annualised over 20 years' },
+      { ticker: 'NVDA', name: 'Nvidia Corporation',          assetKey: 'stocks',  note: 'AI GPU monopolist; ~194% revenue growth in FY2024 driven by data centre demand' },
+      { ticker: 'MSFT', name: 'Microsoft Corporation',       assetKey: 'stocks',  note: 'Cloud and AI compounder with 15+ consecutive years of dividend growth' },
+      { ticker: 'IWF',  name: 'iShares Russell 1000 Growth', assetKey: 'etfs',    note: 'Large-cap US growth stocks in a single iShares ETF; complements QQQ with broader coverage' },
     ],
     theme: {
       gradient: 'from-amber-600 to-amber-500',
@@ -262,25 +265,26 @@ export const RISK_PROFILES: Record<RiskLevel, RiskProfile> = {
     label: 'Very Aggressive',
     tagline: 'Maximum growth, maximum risk',
     description:
-      'Maximises exposure to high-conviction equities (TSLA, NVDA, META), ' +
-      'crypto (BTC, ETH, SOL), and high-beta ETFs (QQQ, ARKK). ' +
+      'Maximises exposure to high-conviction equities (NVDA, TSLA, META), a large ' +
+      'Bitcoin/Ethereum/Solana crypto sleeve, and high-beta ETFs including the ' +
+      'iShares Russell 2000 Growth ETF (IWO) and ARK Innovation (ARKK). ' +
       'Only for experienced investors with a very long horizon who can withstand extreme drawdowns.',
     riskScore: 4,
     expectedReturn: '15–30%+ p.a.',
     volatility: 'Very High',
     timeHorizon: '15+ years',
     allocations: [
-      { assetKey: 'stocks',      weight: 35, examples: ['TSLA', 'NVDA', 'META', 'AMZN']  },
+      { assetKey: 'stocks',      weight: 35, examples: ['NVDA', 'TSLA', 'META', 'AMZN']  },
       { assetKey: 'crypto',      weight: 35, examples: ['BTC', 'ETH', 'SOL']             },
-      { assetKey: 'etfs',        weight: 20, examples: ['QQQ', 'ARKK', 'VGT']           },
-      { assetKey: 'commodities', weight: 10, examples: ['GLD', 'USO', 'SLV']            },
+      { assetKey: 'etfs',        weight: 20, examples: ['QQQ', 'IWO', 'ARKK']            },
+      { assetKey: 'commodities', weight: 10, examples: ['GLD', 'USO', 'SLV']             },
     ],
     availableAssets: ['indexFunds', 'etfs', 'stocks', 'commodities', 'crypto'],
     topPicks: [
-      { ticker: 'NVDA', name: 'Nvidia Corporation',     assetKey: 'stocks', note: 'AI chip monopolist; central to every major AI infrastructure build-out' },
-      { ticker: 'BTC',  name: 'Bitcoin',                assetKey: 'crypto', note: 'Largest crypto by market cap; now ETF-accessible (IBIT, FBTC)' },
-      { ticker: 'TSLA', name: 'Tesla Inc.',             assetKey: 'stocks', note: 'High-beta growth across EVs, energy storage, and autonomous driving' },
-      { ticker: 'QQQ',  name: 'Invesco Nasdaq-100 ETF', assetKey: 'etfs',  note: 'High-conviction tech concentration for maximum long-run growth exposure' },
+      { ticker: 'NVDA', name: 'Nvidia Corporation',              assetKey: 'stocks', note: 'AI infrastructure monopolist; data-centre GPU revenue surpassed $47B in FY2024' },
+      { ticker: 'BTC',  name: 'Bitcoin',                        assetKey: 'crypto', note: 'Institutional-grade crypto; now accessible via iShares Bitcoin Trust (IBIT)' },
+      { ticker: 'TSLA', name: 'Tesla Inc.',                     assetKey: 'stocks', note: 'High-beta compounder spanning EVs, energy storage, and autonomous robotics' },
+      { ticker: 'IWO',  name: 'iShares Russell 2000 Growth ETF', assetKey: 'etfs',  note: 'Small-cap US growth via iShares; highest historical volatility in the ETF universe' },
     ],
     theme: {
       gradient: 'from-orange-600 to-rose-500',
