@@ -56,13 +56,14 @@ interface DonutChartProps {
 function DonutChart({ allocations, profileLabel }: DonutChartProps) {
   const [hovered, setHovered] = useState<AssetKey | null>(null)
 
-  let cumAngle = 0
-  const segments = allocations.map((a) => {
-    const startDeg = cumAngle
-    const endDeg = cumAngle + (a.weight / 100) * 360
-    cumAngle = endDeg
-    return { ...a, startDeg, endDeg }
-  })
+  const segments = allocations.reduce(
+    (acc: Array<PortfolioAllocation & { startDeg: number; endDeg: number }>, a) => {
+      const startDeg = acc.at(-1)?.endDeg ?? 0
+      const endDeg = startDeg + (a.weight / 100) * 360
+      return [...acc, { ...a, startDeg, endDeg }]
+    },
+    [],
+  )
 
   const hoveredAlloc = hovered ? allocations.find((a) => a.assetKey === hovered) : null
 

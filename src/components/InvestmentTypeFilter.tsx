@@ -1,10 +1,7 @@
 'use client'
 
 import { type AssetClassId, type RiskProfileId } from '@/data/riskProfiles'
-import {
-  getAllowedAssetClasses,
-  getAssetById,
-} from '@/lib/investmentLogic'
+import { getAllowedAssetClasses } from '@/lib/investmentLogic'
 
 interface Props {
   profileId: RiskProfileId

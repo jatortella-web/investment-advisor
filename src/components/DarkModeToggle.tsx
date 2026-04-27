@@ -1,14 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export default function DarkModeToggle() {
-  const [dark, setDark] = useState(false)
-
-  // Sync state with the class already applied by the inline script
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains('dark'))
-  }, [])
+  const [dark, setDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  )
 
   function toggle() {
     const next = !dark
@@ -16,7 +13,7 @@ export default function DarkModeToggle() {
     document.documentElement.classList.toggle('dark', next)
     try {
       localStorage.setItem('theme', next ? 'dark' : 'light')
-    } catch (_) {}
+    } catch {}
   }
 
   return (
