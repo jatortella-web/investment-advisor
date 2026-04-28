@@ -16,6 +16,19 @@ function extractRate(text: string): number | undefined {
   return m ? parseFloat(m[1]) : undefined
 }
 
+/**
+ * Fallback rate extractor for Rule of 72 when the user omits the % sign
+ * (e.g. "rule of 72 at 8"). Returns the first number that is not 72 itself
+ * and falls in a plausible annual-rate range (0.1–50).
+ */
+function extractBareRate(text: string): number | undefined {
+  for (const m of text.matchAll(/\b(\d+(?:\.\d+)?)\b/g)) {
+    const v = parseFloat(m[1])
+    if (!isNaN(v) && v !== 72 && v >= 0.1 && v <= 50) return v
+  }
+  return undefined
+}
+
 /** Extracts the number of years (e.g. "10 years", "10yr"). */
 function extractYears(text: string): number | undefined {
   const m = text.match(/([\d.]+)\s*yr/i) ?? text.match(/([\d.]+)\s*year/i)
@@ -43,13 +56,24 @@ function extractPrincipal(text: string): number | undefined {
  * and returns a plain-text answer.
  */
 function respond(input: string): string {
+  console.log('[Chat] respond called with:', input)
+
   // ── Rule of 72 ──
-  if (/rule.{0,5}72|doubl(e|ing)|how long.{0,20}double/i.test(input)) {
-    const rate = extractRate(input)
+  const matchesRule72 = /rule.{0,5}72|doubl(e|ing)|how long.{0,20}double/i.test(input)
+  console.log('[Chat] Rule of 72 keyword match:', matchesRule72)
+
+  if (matchesRule72) {
+    // Accept "8%", "8 percent", or bare "8" (fallback) so users don't need the % sign
+    const rate = extractRate(input) ?? extractBareRate(input)
+    console.log('[Chat] Extracted rate:', rate)
+
     if (!rate || rate <= 0) {
-      return 'Please include an annual return rate, e.g. "How long to double at 8%?"'
+      return 'Please include an annual return rate, e.g. "rule of 72 at 8%" or "how long to double at 6%"'
     }
+
     const years = calculateRuleOf72(rate)
+    console.log('[Chat] calculateRuleOf72 result:', years)
+
     return (
       `At ${rate}% per year, your investment doubles in approximately ${years.toFixed(1)} years.\n` +
       `(Rule of 72: 72 ÷ ${rate} = ${years.toFixed(1)})`
@@ -57,10 +81,14 @@ function respond(input: string): string {
   }
 
   // ── Compound interest ──
-  if (/compound|future value|how much.{0,20}(have|grow|worth)|will.{0,20}grow|invest/i.test(input)) {
+  const matchesCompound = /compound|future value|how much.{0,20}(have|grow|worth)|will.{0,20}grow|invest/i.test(input)
+  console.log('[Chat] Compound interest keyword match:', matchesCompound)
+
+  if (matchesCompound) {
     const principal = extractPrincipal(input)
     const rate = extractRate(input)
     const years = extractYears(input)
+    console.log('[Chat] principal:', principal, 'rate:', rate, 'years:', years)
 
     if (!principal || !rate || !years) {
       const missing: string[] = []
@@ -75,12 +103,15 @@ function respond(input: string): string {
     const fmt = (n: number) =>
       n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+    console.log('[Chat] calculateCompoundInterest result:', future)
+
     return (
       `$${principal.toLocaleString()} at ${rate}% for ${years} years → $${fmt(future)}\n` +
       `Gain: $${fmt(gain)} (${((gain / principal) * 100).toFixed(1)}% total return)`
     )
   }
 
+  console.log('[Chat] No intent matched — returning help message')
   return (
     'I can calculate:\n' +
     '• Compound interest — e.g. "If I invest $10,000 at 7% for 10 years, how much will I have?"\n' +
