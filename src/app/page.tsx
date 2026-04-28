@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { type RiskLevel } from '@/lib/investment-logic'
 import RiskSelector from '@/components/RiskSelector'
 import InvestmentDashboard from '@/components/InvestmentDashboard'
+import Chat from '@/components/Chat'
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -165,6 +166,11 @@ export default function HomePage() {
           </p>
         </section>
       )}
+
+      {/* Finance calculator chat */}
+      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 dark:bg-slate-800 dark:ring-slate-700">
+        <Chat />
+      </section>
 
       {/* Financial disclaimer */}
       <FinancialDisclaimer />
