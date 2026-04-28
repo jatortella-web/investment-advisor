@@ -12,6 +12,10 @@ interface LocalResult { text: string; intent: Intent }
 
 // ─── Number extraction helpers ────────────────────────────────────────────────
 
+function containsNumber(text: string): boolean {
+  return /\d/.test(text)
+}
+
 function extractRate(text: string): number | undefined {
   const m = text.match(/([\d.]+)\s*(%|percent)/i)
   return m ? parseFloat(m[1]) : undefined
@@ -66,7 +70,7 @@ function processLocally(input: string, lastIntent: Intent): LocalResult | null {
   }
 
   // ── Contextual follow-up for Rule of 72 ──
-  if (lastIntent === 'ruleOf72') {
+  if (lastIntent === 'ruleOf72' && containsNumber(input)) {
     const rate = extractRate(input) ?? extractBareRate(input)
     if (rate && rate > 0) {
       const years = calculateRuleOf72(rate)
@@ -133,7 +137,8 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([WELCOME])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [lastIntent, setLastIntent] = useState<Intent>(null)
+  // Ref so send() always reads the latest intent even if a closure captured an older render
+  const lastIntentRef = useRef<Intent>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -144,19 +149,21 @@ export default function Chat() {
     const text = input.trim()
     if (!text || loading) return
 
+    console.log('[Chat] Current state lastIntent:', lastIntentRef.current)
+
     const userMsg: Message = { id: Date.now(), role: 'user', text }
     const nextMessages = [...messages, userMsg]
     setMessages(nextMessages)
     setInput('')
 
-    // Try local processing first
-    const local = processLocally(text, lastIntent)
+    // Try local processing first — read from ref to avoid stale closure
+    const local = processLocally(text, lastIntentRef.current)
     if (local) {
       setMessages(prev => [
         ...prev,
         { id: Date.now() + 1, role: 'assistant', text: local.text },
       ])
-      setLastIntent(local.intent)
+      lastIntentRef.current = local.intent
       return
     }
 
@@ -173,7 +180,7 @@ export default function Chat() {
         ...prev,
         { id: Date.now() + 1, role: 'assistant', text: data.text },
       ])
-      setLastIntent(null)
+      lastIntentRef.current = null
     } catch {
       setMessages(prev => [
         ...prev,
