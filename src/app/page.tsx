@@ -102,6 +102,10 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+        Investment Advisor Chat
+      </h1>
+
       {/* Hero banner */}
       <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 px-8 py-12 shadow-xl">
         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-indigo-400">
