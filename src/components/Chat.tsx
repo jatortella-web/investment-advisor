@@ -59,7 +59,9 @@ function respond(input: string): string {
   console.log('[Chat] respond called with:', input)
 
   // ── Rule of 72 ──
-  const matchesRule72 = /rule.{0,5}72|doubl(e|ing)|how long.{0,20}double/i.test(input)
+  const lower = input.toLowerCase()
+  const matchesRule72 =
+    lower.includes('72') && (lower.includes('rule') || lower.includes('regla'))
   console.log('[Chat] Rule of 72 keyword match:', matchesRule72)
 
   if (matchesRule72) {
@@ -142,6 +144,8 @@ export default function Chat() {
   function send() {
     const text = input.trim()
     if (!text) return
+
+    console.log('[Chat] Input received:', text)
 
     const userMsg: Message = { id: Date.now(), role: 'user', text }
     const replyMsg: Message = { id: Date.now() + 1, role: 'assistant', text: respond(text) }
