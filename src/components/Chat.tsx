@@ -6,21 +6,17 @@ import { calculateCompoundInterest, calculateRuleOf72 } from '@/utils/finance'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Role = 'user' | 'assistant'
+type Intent = 'ruleOf72' | 'compoundInterest' | null
 interface Message { id: number; role: Role; text: string }
+interface LocalResult { text: string; intent: Intent }
 
 // ─── Number extraction helpers ────────────────────────────────────────────────
 
-/** Extracts the first percentage value (e.g. "7%", "7 percent"). */
 function extractRate(text: string): number | undefined {
   const m = text.match(/([\d.]+)\s*(%|percent)/i)
   return m ? parseFloat(m[1]) : undefined
 }
 
-/**
- * Fallback rate extractor for Rule of 72 when the user omits the % sign
- * (e.g. "rule of 72 at 8"). Returns the first number that is not 72 itself
- * and falls in a plausible annual-rate range (0.1–50).
- */
 function extractBareRate(text: string): number | undefined {
   for (const m of text.matchAll(/\b(\d+(?:\.\d+)?)\b/g)) {
     const v = parseFloat(m[1])
@@ -29,17 +25,11 @@ function extractBareRate(text: string): number | undefined {
   return undefined
 }
 
-/** Extracts the number of years (e.g. "10 years", "10yr"). */
 function extractYears(text: string): number | undefined {
   const m = text.match(/([\d.]+)\s*yr/i) ?? text.match(/([\d.]+)\s*year/i)
   return m ? parseFloat(m[1]) : undefined
 }
 
-/**
- * Extracts the principal investment amount.
- * Looks for a currency symbol prefix ($, €, £) or the word "invest" followed
- * by a number, to avoid confusing the principal with a rate or year count.
- */
 function extractPrincipal(text: string): number | undefined {
   const m =
     text.match(/[$€£]\s*([\d,]+(?:\.\d+)?)/) ??
@@ -49,55 +39,66 @@ function extractPrincipal(text: string): number | undefined {
   return isNaN(v) ? undefined : v
 }
 
-// ─── Assistant logic ──────────────────────────────────────────────────────────
+// ─── Local intent processing ──────────────────────────────────────────────────
 
-/**
- * Interprets the user's free-text message, calls the relevant finance utility,
- * and returns a plain-text answer.
- */
-function respond(input: string): string {
-  console.log('[Chat] respond called with:', input)
-
-  // ── Rule of 72 ──
+function processLocally(input: string, lastIntent: Intent): LocalResult | null {
   const lower = input.toLowerCase()
+
+  // ── Rule of 72 (explicit keywords) ──
   const matchesRule72 =
     lower.includes('72') && (lower.includes('rule') || lower.includes('regla'))
-  console.log('[Chat] Rule of 72 keyword match:', matchesRule72)
 
   if (matchesRule72) {
-    // Accept "8%", "8 percent", or bare "8" (fallback) so users don't need the % sign
     const rate = extractRate(input) ?? extractBareRate(input)
-    console.log('[Chat] Extracted rate:', rate)
-
     if (!rate || rate <= 0) {
-      return 'Please include an annual return rate, e.g. "rule of 72 at 8%" or "how long to double at 6%"'
+      return {
+        text: 'Please include an annual return rate, e.g. "rule of 72 at 8%" or "how long to double at 6%"',
+        intent: null,
+      }
     }
-
     const years = calculateRuleOf72(rate)
-    console.log('[Chat] calculateRuleOf72 result:', years)
+    return {
+      text:
+        `At ${rate}% per year, your investment doubles in approximately ${years.toFixed(1)} years.\n` +
+        `(Rule of 72: 72 ÷ ${rate} = ${years.toFixed(1)})`,
+      intent: 'ruleOf72',
+    }
+  }
 
-    return (
-      `At ${rate}% per year, your investment doubles in approximately ${years.toFixed(1)} years.\n` +
-      `(Rule of 72: 72 ÷ ${rate} = ${years.toFixed(1)})`
-    )
+  // ── Contextual follow-up for Rule of 72 ──
+  if (lastIntent === 'ruleOf72') {
+    const rate = extractRate(input) ?? extractBareRate(input)
+    if (rate && rate > 0) {
+      const years = calculateRuleOf72(rate)
+      return {
+        text:
+          `At ${rate}% per year, your investment doubles in approximately ${years.toFixed(1)} years.\n` +
+          `(Rule of 72: 72 ÷ ${rate} = ${years.toFixed(1)})`,
+        intent: 'ruleOf72',
+      }
+    }
   }
 
   // ── Compound interest ──
-  const matchesCompound = /compound|future value|how much.{0,20}(have|grow|worth)|will.{0,20}grow|invest/i.test(input)
-  console.log('[Chat] Compound interest keyword match:', matchesCompound)
+  const matchesCompound =
+    /compound|future value|how much.{0,20}(have|grow|worth)|will.{0,20}grow|invest/i.test(input)
 
   if (matchesCompound) {
     const principal = extractPrincipal(input)
     const rate = extractRate(input)
     const years = extractYears(input)
-    console.log('[Chat] principal:', principal, 'rate:', rate, 'years:', years)
 
     if (!principal || !rate || !years) {
       const missing: string[] = []
       if (!principal) missing.push('initial amount (prefix with $, e.g. $10,000)')
       if (!rate) missing.push('annual rate (e.g. 7%)')
       if (!years) missing.push('time horizon (e.g. 10 years)')
-      return `I'm missing: ${missing.join('; ')}.\nTry: "If I invest $10,000 at 7% for 10 years, how much will I have?"`
+      return {
+        text:
+          `I'm missing: ${missing.join('; ')}.\n` +
+          `Try: "If I invest $10,000 at 7% for 10 years, how much will I have?"`,
+        intent: null,
+      }
     }
 
     const future = calculateCompoundInterest(principal, rate / 100, years)
@@ -105,20 +106,15 @@ function respond(input: string): string {
     const fmt = (n: number) =>
       n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-    console.log('[Chat] calculateCompoundInterest result:', future)
-
-    return (
-      `$${principal.toLocaleString()} at ${rate}% for ${years} years → $${fmt(future)}\n` +
-      `Gain: $${fmt(gain)} (${((gain / principal) * 100).toFixed(1)}% total return)`
-    )
+    return {
+      text:
+        `$${principal.toLocaleString()} at ${rate}% for ${years} years → $${fmt(future)}\n` +
+        `Gain: $${fmt(gain)} (${((gain / principal) * 100).toFixed(1)}% total return)`,
+      intent: 'compoundInterest',
+    }
   }
 
-  console.log('[Chat] No intent matched — returning help message')
-  return (
-    'I can calculate:\n' +
-    '• Compound interest — e.g. "If I invest $10,000 at 7% for 10 years, how much will I have?"\n' +
-    '• Rule of 72 — e.g. "How long to double my money at 8%?"'
-  )
+  return null
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -129,29 +125,63 @@ const WELCOME: Message = {
   text:
     'Hi! I can calculate:\n' +
     '• Compound interest — e.g. "If I invest $10,000 at 7% for 10 years, how much will I have?"\n' +
-    '• Rule of 72 — e.g. "How long to double my money at 8%?"',
+    '• Rule of 72 — e.g. "How long to double my money at 8%?"\n' +
+    'You can also ask me anything about personal finance.',
 }
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([WELCOME])
   const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [lastIntent, setLastIntent] = useState<Intent>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  function send() {
+  async function send() {
     const text = input.trim()
-    if (!text) return
-
-    console.log('[Chat] Input received:', text)
+    if (!text || loading) return
 
     const userMsg: Message = { id: Date.now(), role: 'user', text }
-    const replyMsg: Message = { id: Date.now() + 1, role: 'assistant', text: respond(text) }
-
-    setMessages(prev => [...prev, userMsg, replyMsg])
+    const nextMessages = [...messages, userMsg]
+    setMessages(nextMessages)
     setInput('')
+
+    // Try local processing first
+    const local = processLocally(text, lastIntent)
+    if (local) {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now() + 1, role: 'assistant', text: local.text },
+      ])
+      setLastIntent(local.intent)
+      return
+    }
+
+    // AI fallback
+    setLoading(true)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: nextMessages }),
+      })
+      const data = (await res.json()) as { text: string }
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now() + 1, role: 'assistant', text: data.text },
+      ])
+      setLastIntent(null)
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now() + 1, role: 'assistant', text: 'Something went wrong. Please try again.' },
+      ])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleKey(e: KeyboardEvent<HTMLInputElement>) {
@@ -167,7 +197,7 @@ export default function Chat() {
       <div className="border-b border-slate-200 px-5 py-3 dark:border-slate-700">
         <h2 className="font-semibold text-slate-800 dark:text-white">Finance Calculator</h2>
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          Compound interest &amp; Rule of 72
+          Compound interest, Rule of 72 &amp; AI-powered finance Q&amp;A
         </p>
       </div>
 
@@ -192,6 +222,15 @@ export default function Chat() {
             </div>
           </div>
         ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl rounded-tl-sm bg-slate-100 px-4 py-2 text-sm text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+              Thinking…
+            </div>
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -203,12 +242,13 @@ export default function Chat() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
+            disabled={loading}
             placeholder="Ask a finance question…"
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
+            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
           />
           <button
             onClick={send}
-            disabled={!input.trim()}
+            disabled={!input.trim() || loading}
             className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Send
